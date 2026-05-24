@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
-import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../models/models.dart';
 import '../providers/marketplace_provider.dart';
 import '../providers/auth_provider.dart';
@@ -373,70 +374,37 @@ class ProductDetailSheet extends StatefulWidget {
 }
 
 class _ProductDetailSheetState extends State<ProductDetailSheet> {
-  late Razorpay _razorpay;
-
-  @override
-  void initState() {
-    super.initState();
-    _razorpay = Razorpay();
-    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
-    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
-    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
-  }
-
-  @override
-  void dispose() {
-    _razorpay.clear();
-    super.dispose();
-  }
-
-  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
-    final success = await ApiService().verifyPayment({
-      'razorpay_order_id': response.orderId,
-      'razorpay_payment_id': response.paymentId,
-      'razorpay_signature': response.signature,
-    });
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(success ? '🎉 Payment Successful!' : '❌ Verification Failed'),
-          backgroundColor: success ? ecoGreen : ecoError,
-        ),
-      );
-      if (success) Navigator.pop(context);
-    }
-  }
-
-  void _handlePaymentError(PaymentFailureResponse response) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('❌ Payment Failed: ${response.message}'), backgroundColor: ecoError),
-    );
-  }
-
-  void _handleExternalWallet(ExternalWalletResponse response) {}
 
   void _startPayment() async {
-    try {
-      final user = context.read<AuthProvider>().user;
-      final order = await ApiService().createPaymentOrder(widget.product.price);
-      
-      var options = {
-        'key': 'rzp_test_YOUR_KEY_ID', // Replace with your key from .env or config
-        'amount': order['amount'],
-        'name': 'EcoWave',
-        'description': widget.product.title,
-        'order_id': order['id'],
-        'prefill': {
-          'name': user?.name ?? 'Eco User',
-          'email': user?.email ?? 'user@ecowave.com',
-        },
-        'theme': {'color': '#2E7D32'}
-      };
+    final product = widget.product;
+    final user = context.read<AuthProvider>().user;
 
-      _razorpay.open(options);
-    } catch (e) {
-      debugPrint('Error starting payment: $e');
+    if (product.sellerUpiId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('⚠️ Seller has not set a UPI ID'), backgroundColor: ecoError),
+      );
+      return;
+    }
+
+    final paid = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: ecoSurface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => _UpiCheckoutSheet(
+        product: product,
+        buyerEmail: user?.email ?? '',
+      ),
+    );
+
+    if (paid == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('🎉 Payment confirmed! Item marked as sold.'), backgroundColor: ecoGreen),
+      );
+      Navigator.pop(context);
+      context.read<MarketplaceProvider>().loadProducts();
     }
   }
 
@@ -452,31 +420,15 @@ class _ProductDetailSheetState extends State<ProductDetailSheet> {
         controller: ctrl,
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
         children: [
-          Center(
-            child: Container(
-              width: 40, height: 4,
-              decoration: BoxDecoration(
-                color: ecoBorder,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
+          Center(child: Container(width: 40, height: 4,
+            decoration: BoxDecoration(color: ecoBorder, borderRadius: BorderRadius.circular(2)))),
           const SizedBox(height: 12),
-
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: SizedBox(height: 220, child: ProductImage(image: product.image)),
-          ),
+          ClipRRect(borderRadius: BorderRadius.circular(16),
+            child: SizedBox(height: 220, child: ProductImage(image: product.image))),
           const SizedBox(height: 16),
-
-          Text(product.title,
-              style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.w800, fontSize: 22)),
+          Text(product.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 22)),
           const SizedBox(height: 6),
-          Text('₹${product.price.toStringAsFixed(0)}',
-              style: const TextStyle(
-                  color: ecoGreenLight, fontWeight: FontWeight.w900, fontSize: 26)),
-
+          Text('₹${product.price.toStringAsFixed(0)}', style: const TextStyle(color: ecoGreenLight, fontWeight: FontWeight.w900, fontSize: 26)),
           if (product.ecoImpact != null) ...[
             const SizedBox(height: 12),
             Wrap(spacing: 8, runSpacing: 6, children: [
@@ -485,69 +437,36 @@ class _ProductDetailSheetState extends State<ProductDetailSheet> {
               _ImpactBadge('♻️ ${product.ecoImpact!.waste}kg Waste'),
             ]),
           ],
-
           const SizedBox(height: 16),
-          const Text('Description',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15)),
+          const Text('Description', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15)),
           const SizedBox(height: 6),
-          Text(product.description,
-              style: TextStyle(color: ecoMuted, fontSize: 14, height: 1.6)),
-
+          Text(product.description, style: TextStyle(color: ecoMuted, fontSize: 14, height: 1.6)),
           if (product.sellerLocation.isNotEmpty) ...[
             const SizedBox(height: 8),
-            Row(
-              children: [
-                Text('📍 ${product.sellerLocation}',
-                    style: TextStyle(color: ecoMuted, fontSize: 13)),
-                if (product.location != null) ...[
-                  const Spacer(),
-                  TextButton.icon(
-                    onPressed: () => context.push('/map', extra: product),
-                    icon: const Icon(Icons.map, size: 16, color: ecoGreenLight),
-                    label: const Text('View Map', style: TextStyle(color: ecoGreenLight, fontSize: 12)),
-                  ),
-                ],
+            Row(children: [
+              Text('📍 ${product.sellerLocation}', style: TextStyle(color: ecoMuted, fontSize: 13)),
+              if (product.location != null) ...[
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: () => context.push('/map', extra: product),
+                  icon: const Icon(Icons.map, size: 16, color: ecoGreenLight),
+                  label: const Text('View Map', style: TextStyle(color: ecoGreenLight, fontSize: 12)),
+                ),
               ],
-            ),
+            ]),
           ],
-
           const SizedBox(height: 24),
-
-          // Action Buttons
           Row(children: [
-            Expanded(
-              child: SizedBox(
-                height: 50,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: ecoGreenGradient,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: TextButton(
-                    onPressed: _startPayment,
-                    child: const Text('Buy Now',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
-                  ),
-                ),
-              ),
-            ),
+            Expanded(child: SizedBox(height: 50, child: DecoratedBox(
+              decoration: BoxDecoration(gradient: ecoGreenGradient, borderRadius: BorderRadius.circular(14)),
+              child: TextButton(onPressed: _startPayment,
+                child: const Text('Buy Now', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)))))),
             const SizedBox(width: 12),
-            Expanded(
-              child: SizedBox(
-                height: 50,
-                child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: ecoGreen),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  onPressed: () {
-                    Navigator.pop(context);
-                    context.push('/chat', extra: product);
-                  },
-                  child: const Text('Chat', style: TextStyle(color: ecoGreenLight)),
-                ),
-              ),
-            ),
+            Expanded(child: SizedBox(height: 50, child: OutlinedButton(
+              style: OutlinedButton.styleFrom(side: const BorderSide(color: ecoGreen),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+              onPressed: () { Navigator.pop(context); context.push('/chat', extra: product); },
+              child: const Text('Chat', style: TextStyle(color: ecoGreenLight))))),
           ]),
         ],
       ),
@@ -739,4 +658,148 @@ class _DlgField extends StatelessWidget {
       focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: ecoGreen)),
     ),
   );
+}
+
+// ── UPI Checkout Sheet ────────────────────────────────────────────────────────
+
+class _UpiCheckoutSheet extends StatefulWidget {
+  final Product product;
+  final String buyerEmail;
+  const _UpiCheckoutSheet({required this.product, required this.buyerEmail});
+
+  @override
+  State<_UpiCheckoutSheet> createState() => _UpiCheckoutSheetState();
+}
+
+class _UpiCheckoutSheetState extends State<_UpiCheckoutSheet> {
+  String? _txnId;
+  bool _launching = false;
+  bool _confirming = false;
+  bool _upiLaunched = false;
+
+  String get _upiUrl {
+    final p = widget.product;
+    final amount = p.price.toStringAsFixed(2);
+    return 'upi://pay?pa=${Uri.encodeComponent(p.sellerUpiId)}'
+        '&pn=${Uri.encodeComponent("EcoWave Seller")}'
+        '&am=$amount&cu=INR'
+        '&tn=${Uri.encodeComponent("EcoWave: ${p.title}")}';
+  }
+
+  Future<void> _initTransaction() async {
+    try {
+      final txn = await ApiService().createTransaction(
+        productId: widget.product.id,
+        buyerEmail: widget.buyerEmail,
+        sellerUpiId: widget.product.sellerUpiId,
+        amount: widget.product.price,
+      );
+      setState(() => _txnId = txn['txn_id'] as String?);
+    } catch (_) {}
+  }
+
+  Future<void> _launchUpi() async {
+    setState(() => _launching = true);
+    await _initTransaction();
+    final uri = Uri.parse(_upiUrl);
+    try {
+      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (launched) setState(() => _upiLaunched = true);
+    } catch (_) {}
+    setState(() => _launching = false);
+  }
+
+  Future<void> _confirmPayment() async {
+    if (_txnId == null) await _initTransaction();
+    setState(() => _confirming = true);
+    final success = await ApiService().confirmPayment(
+      txnId: _txnId ?? '',
+      productId: widget.product.id,
+      buyerEmail: widget.buyerEmail,
+    );
+    setState(() => _confirming = false);
+    if (mounted) Navigator.pop(context, success);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.product;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(context).viewInsets.bottom + 32),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Container(width: 40, height: 4,
+          decoration: BoxDecoration(color: ecoBorder, borderRadius: BorderRadius.circular(2))),
+        const SizedBox(height: 16),
+        const Text('💳 Pay via UPI',
+            style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 4),
+        Text('Pay directly to the seller', style: TextStyle(color: ecoMuted, fontSize: 13)),
+        const SizedBox(height: 20),
+
+        // Order summary
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(color: ecoCard, borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: ecoBorder)),
+          child: Column(children: [
+            Row(children: [
+              Expanded(child: Text(p.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                maxLines: 2, overflow: TextOverflow.ellipsis)),
+              const SizedBox(width: 12),
+              Text('₹${p.price.toStringAsFixed(0)}',
+                  style: const TextStyle(color: ecoGreenLight, fontWeight: FontWeight.w900, fontSize: 20)),
+            ]),
+            const SizedBox(height: 10),
+            Row(children: [
+              const Icon(Icons.account_balance_wallet_outlined, size: 14, color: ecoGreenLight),
+              const SizedBox(width: 6),
+              Expanded(child: Text('Paying to: ${p.sellerUpiId}',
+                  style: TextStyle(color: ecoMuted, fontSize: 12))),
+            ]),
+          ]),
+        ),
+        const SizedBox(height: 20),
+
+        // QR Code
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+          child: QrImageView(data: _upiUrl, version: QrVersions.auto, size: 200,
+            eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.roundedOuter, color: Color(0xFF111811)),
+            dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.roundedOutsideCorners, color: Color(0xFF111811))),
+        ),
+        const SizedBox(height: 8),
+        Text('Scan with any UPI app (GPay, PhonePe, Paytm)',
+            style: TextStyle(color: ecoMuted, fontSize: 11)),
+        const SizedBox(height: 20),
+
+        // Pay with UPI App button
+        SizedBox(width: double.infinity, height: 52, child: DecoratedBox(
+          decoration: BoxDecoration(gradient: ecoGreenGradient, borderRadius: BorderRadius.circular(14)),
+          child: TextButton(
+            onPressed: _launching ? null : _launchUpi,
+            child: _launching
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+              : Row(mainAxisAlignment: MainAxisAlignment.center, children: const [
+                  Icon(Icons.open_in_new, color: Colors.white, size: 18),
+                  SizedBox(width: 8),
+                  Text('Open UPI App', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
+                ]),
+          ),
+        )),
+        const SizedBox(height: 12),
+
+        // Confirm payment button
+        SizedBox(width: double.infinity, height: 52, child: OutlinedButton(
+          style: OutlinedButton.styleFrom(side: const BorderSide(color: ecoGreen),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+          onPressed: _confirming ? null : _confirmPayment,
+          child: _confirming
+            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: ecoGreenLight, strokeWidth: 2))
+            : const Text('✅ I have completed the payment',
+                style: TextStyle(color: ecoGreenLight, fontWeight: FontWeight.w600)),
+        )),
+      ]),
+    );
+  }
 }

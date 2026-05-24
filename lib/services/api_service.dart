@@ -1,37 +1,8 @@
 import 'package:dio/dio.dart';
 import '../models/models.dart';
+import '../config/server_config.dart';
 
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
-
-/*String get _backendUrl {
-  if (kIsWeb) return 'http://localhost:5001';
-  try {
-    if (Platform.isAndroid || Platform.isIOS) return 'http://localhost:5001';
-  } catch (e) {
-    // Handled
-  }
-  return 'http://localhost:5001';
-}*/
-
-String get _backendUrl {
-  if (kIsWeb) return 'http://localhost:5001';
-  try {
-    if (Platform.isAndroid) {
-      // 10.0.2.2 is the 'localhost' for Android Emulators to see the host machine
-      return 'http://10.0.2.2:5001';
-    }
-    if (Platform.isIOS) {
-      // iOS simulators share the network with the Mac, so localhost works
-      return 'http://localhost:5001';
-    }
-  } catch (e) {
-    // Fallback
-  }
-  return 'http://10.0.2.2:5001';
-}
-
-final String _baseUrl = _backendUrl;
+final String _baseUrl = serverUrl;
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
@@ -125,17 +96,33 @@ class ApiService {
     return null;
   }
 
-  // ── Payments ─────────────────────────────────────────────────────────────
-  Future<Map<String, dynamic>> createPaymentOrder(double amount) async {
-    final res = await _dio.post('/api/payments/create-order', data: {
+  // ── UPI Payments ─────────────────────────────────────────────────────────
+  Future<Map<String, dynamic>> createTransaction({
+    required String productId,
+    required String buyerEmail,
+    required String sellerUpiId,
+    required double amount,
+  }) async {
+    final res = await _dio.post('/api/payments/create-transaction', data: {
+      'product_id': productId,
+      'buyer_email': buyerEmail,
+      'seller_upi_id': sellerUpiId,
       'amount': amount,
     });
-    return res.data['order'] as Map<String, dynamic>;
+    return res.data['transaction'] as Map<String, dynamic>;
   }
 
-  Future<bool> verifyPayment(Map<String, dynamic> paymentData) async {
+  Future<bool> confirmPayment({
+    required String txnId,
+    required String productId,
+    required String buyerEmail,
+  }) async {
     try {
-      final res = await _dio.post('/api/payments/verify', data: paymentData);
+      final res = await _dio.post('/api/payments/confirm', data: {
+        'txn_id': txnId,
+        'product_id': productId,
+        'buyer_email': buyerEmail,
+      });
       return res.data['success'] == true;
     } catch (e) {
       return false;

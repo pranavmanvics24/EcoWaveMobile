@@ -32,14 +32,14 @@
             </intent-filter>
         </activity>
         <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="YOUR_GOOGLE_MAPS_API_KEY_HERE"/>
-
-        <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
     </application>
     <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="upi" />
+        </intent>
         <intent>
             <action android:name="android.media.action.IMAGE_CAPTURE" />
         </intent>

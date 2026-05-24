@@ -24,6 +24,7 @@ class _SellScreenState extends State<SellScreen> {
   final _descCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
   final _locationCtrl = TextEditingController();
+  final _upiCtrl = TextEditingController();
 
   String _category = '';
   String _material = '';
@@ -39,6 +40,7 @@ class _SellScreenState extends State<SellScreen> {
     _descCtrl.dispose();
     _priceCtrl.dispose();
     _locationCtrl.dispose();
+    _upiCtrl.dispose();
     super.dispose();
   }
 
@@ -96,6 +98,7 @@ class _SellScreenState extends State<SellScreen> {
       sellerEmail: user?.email ?? '',
       sellerLocation: _locationCtrl.text.trim(),
       location: _pickedLocation,
+      sellerUpiId: _upiCtrl.text.trim(),
     ));
 
     if (mounted && context.read<SellProvider>().success) {
@@ -108,7 +111,7 @@ class _SellScreenState extends State<SellScreen> {
       );
       // Clear form
       _titleCtrl.clear(); _descCtrl.clear();
-      _priceCtrl.clear(); _locationCtrl.clear();
+      _priceCtrl.clear(); _locationCtrl.clear(); _upiCtrl.clear();
       setState(() { 
         _imageBase64 = ''; 
         _hasImage = false; 
@@ -253,6 +256,16 @@ class _SellScreenState extends State<SellScreen> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 16),
+
+                _FormLabel('UPI ID (for receiving payments)'),
+                const SizedBox(height: 6),
+                _EcoField(
+                  ctrl: _upiCtrl,
+                  hint: 'yourname@upi or 9876543210@paytm',
+                ),
+                Text('  💡 Buyers will pay you directly via UPI',
+                    style: TextStyle(color: ecoMuted, fontSize: 11)),
                 const SizedBox(height: 16),
 
                 // Error

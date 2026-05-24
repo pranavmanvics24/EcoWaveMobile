@@ -29,6 +29,7 @@ class Product {
   final String sellerLocation;
   final Map<String, double>? location; // {lat: ..., lng: ...}
   final String sellerPhone;
+  final String sellerUpiId;
   final String createdAt;
   final String status;
 
@@ -47,6 +48,7 @@ class Product {
     this.sellerLocation = '',
     this.location,
     this.sellerPhone = '',
+    this.sellerUpiId = '',
     this.createdAt = '',
     this.status = 'active',
   });
@@ -73,6 +75,7 @@ class Product {
               }
             : null,
         sellerPhone: j['seller_phone'] as String? ?? '',
+        sellerUpiId: j['seller_upi_id'] as String? ?? '',
         createdAt: j['created_at'] as String? ?? '',
         status: j['status'] as String? ?? 'active',
       );
@@ -154,6 +157,7 @@ class CreateProductRequest {
   final String sellerEmail;
   final String sellerLocation;
   final Map<String, double>? location;
+  final String sellerUpiId;
   final String sellerId;
 
   const CreateProductRequest({
@@ -167,6 +171,7 @@ class CreateProductRequest {
     required this.sellerEmail,
     required this.sellerLocation,
     this.location,
+    this.sellerUpiId = '',
     this.sellerId = 'anonymous',
   });
 
@@ -181,6 +186,7 @@ class CreateProductRequest {
         'seller_email': sellerEmail,
         'seller_location': sellerLocation,
         'location': location,
+        'seller_upi_id': sellerUpiId,
         'seller_id': sellerId,
       };
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import '../models/models.dart';
+import '../config/server_config.dart';
 
 class ChatProvider extends ChangeNotifier {
   late IO.Socket _socket;
@@ -11,8 +12,7 @@ class ChatProvider extends ChangeNotifier {
   bool get isConnected => _isConnected;
 
   void init(String userEmail) {
-    // Replace with your IP if testing on real device: http://10.0.2.2:5001
-    _socket = IO.io('http://10.0.2.2:5001', 
+    _socket = IO.io(serverUrl, 
       IO.OptionBuilder()
         .setTransports(['websocket'])
         .disableAutoConnect()
