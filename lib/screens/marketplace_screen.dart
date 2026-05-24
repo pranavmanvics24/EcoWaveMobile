@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:go_router/go_router.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 import '../models/models.dart';
 import '../providers/marketplace_provider.dart';
+import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 
@@ -361,12 +364,85 @@ class ProductImage extends StatelessWidget {
 
 // ── Product detail bottom sheet ───────────────────────────────────────────────
 
-class ProductDetailSheet extends StatelessWidget {
+class ProductDetailSheet extends StatefulWidget {
   final Product product;
   const ProductDetailSheet({super.key, required this.product});
 
   @override
+  State<ProductDetailSheet> createState() => _ProductDetailSheetState();
+}
+
+class _ProductDetailSheetState extends State<ProductDetailSheet> {
+  late Razorpay _razorpay;
+
+  @override
+  void initState() {
+    super.initState();
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+  }
+
+  @override
+  void dispose() {
+    _razorpay.clear();
+    super.dispose();
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    final success = await ApiService().verifyPayment({
+      'razorpay_order_id': response.orderId,
+      'razorpay_payment_id': response.paymentId,
+      'razorpay_signature': response.signature,
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(success ? '🎉 Payment Successful!' : '❌ Verification Failed'),
+          backgroundColor: success ? ecoGreen : ecoError,
+        ),
+      );
+      if (success) Navigator.pop(context);
+    }
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('❌ Payment Failed: ${response.message}'), backgroundColor: ecoError),
+    );
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {}
+
+  void _startPayment() async {
+    try {
+      final user = context.read<AuthProvider>().user;
+      final order = await ApiService().createPaymentOrder(widget.product.price);
+      
+      var options = {
+        'key': 'rzp_test_YOUR_KEY_ID', // Replace with your key from .env or config
+        'amount': order['amount'],
+        'name': 'EcoWave',
+        'description': widget.product.title,
+        'order_id': order['id'],
+        'prefill': {
+          'name': user?.name ?? 'Eco User',
+          'email': user?.email ?? 'user@ecowave.com',
+        },
+        'theme': {'color': '#2E7D32'}
+      };
+
+      _razorpay.open(options);
+    } catch (e) {
+      debugPrint('Error starting payment: $e');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final product = widget.product;
     return DraggableScrollableSheet(
       initialChildSize: 0.85,
       minChildSize: 0.5,
@@ -419,12 +495,25 @@ class ProductDetailSheet extends StatelessWidget {
 
           if (product.sellerLocation.isNotEmpty) ...[
             const SizedBox(height: 8),
-            Text('📍 ${product.sellerLocation}',
-                style: TextStyle(color: ecoMuted, fontSize: 13)),
+            Row(
+              children: [
+                Text('📍 ${product.sellerLocation}',
+                    style: TextStyle(color: ecoMuted, fontSize: 13)),
+                if (product.location != null) ...[
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: () => context.push('/map', extra: product),
+                    icon: const Icon(Icons.map, size: 16, color: ecoGreenLight),
+                    label: const Text('View Map', style: TextStyle(color: ecoGreenLight, fontSize: 12)),
+                  ),
+                ],
+              ],
+            ),
           ],
 
           const SizedBox(height: 24),
 
+          // Action Buttons
           Row(children: [
             Expanded(
               child: SizedBox(
@@ -435,14 +524,8 @@ class ProductDetailSheet extends StatelessWidget {
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      showDialog(
-                        context: context,
-                        builder: (_) => ContactSellerDialog(product: product),
-                      );
-                    },
-                    child: const Text('Contact Seller',
+                    onPressed: _startPayment,
+                    child: const Text('Buy Now',
                         style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
                   ),
                 ),
@@ -454,11 +537,14 @@ class ProductDetailSheet extends StatelessWidget {
                 height: 50,
                 child: OutlinedButton(
                   style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: ecoBorder),
+                    side: const BorderSide(color: ecoGreen),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
-                  onPressed: () => Navigator.pop(context),
-                  child: Text('Close', style: TextStyle(color: ecoMuted)),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    context.push('/chat', extra: product);
+                  },
+                  child: const Text('Chat', style: TextStyle(color: ecoGreenLight)),
                 ),
               ),
             ),

@@ -7,6 +7,9 @@ import '../screens/login_screen.dart';
 import '../screens/marketplace_screen.dart';
 import '../screens/sell_screen.dart';
 import '../screens/profile_screen.dart';
+import '../screens/chat_screen.dart';
+import '../screens/map_screen.dart';
+import '../models/models.dart';
 import '../theme/app_theme.dart';
 
 class AppRouter {
@@ -49,6 +52,14 @@ class AppRouter {
                 builder: (_, __) => const ProfileScreen(),
               ),
             ],
+          ),
+          GoRoute(
+            path: '/chat',
+            builder: (context, state) => ChatScreen(product: state.extra as Product),
+          ),
+          GoRoute(
+            path: '/map',
+            builder: (context, state) => MapScreen(product: state.extra as Product),
           ),
         ],
       );

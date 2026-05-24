@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import '../models/models.dart';
 import '../providers/auth_provider.dart';
@@ -29,6 +30,8 @@ class _SellScreenState extends State<SellScreen> {
   String _condition = '';
   String _imageBase64 = '';
   bool _hasImage = false;
+  Map<String, double>? _pickedLocation;
+  bool _gettingLocation = false;
 
   @override
   void dispose() {
@@ -51,6 +54,33 @@ class _SellScreenState extends State<SellScreen> {
     });
   }
 
+  Future<void> _getCurrentLocation() async {
+    setState(() => _gettingLocation = true);
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+        Position position = await Geolocator.getCurrentPosition();
+        setState(() {
+          _pickedLocation = {
+            'lat': position.latitude,
+            'lng': position.longitude,
+          };
+          _locationCtrl.text = "Current Location pinned 📍";
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error getting location: $e')),
+      );
+    } finally {
+      setState(() => _gettingLocation = false);
+    }
+  }
+
   Future<void> _submit() async {
     final user = context.read<AuthProvider>().user;
     if (!_hasImage || _titleCtrl.text.isEmpty || _priceCtrl.text.isEmpty) return;
@@ -65,6 +95,7 @@ class _SellScreenState extends State<SellScreen> {
       material: _material,
       sellerEmail: user?.email ?? '',
       sellerLocation: _locationCtrl.text.trim(),
+      location: _pickedLocation,
     ));
 
     if (mounted && context.read<SellProvider>().success) {
@@ -78,7 +109,14 @@ class _SellScreenState extends State<SellScreen> {
       // Clear form
       _titleCtrl.clear(); _descCtrl.clear();
       _priceCtrl.clear(); _locationCtrl.clear();
-      setState(() { _imageBase64 = ''; _hasImage = false; _category = ''; _material = ''; _condition = ''; });
+      setState(() { 
+        _imageBase64 = ''; 
+        _hasImage = false; 
+        _category = ''; 
+        _material = ''; 
+        _condition = ''; 
+        _pickedLocation = null;
+      });
     }
   }
 
@@ -202,7 +240,19 @@ class _SellScreenState extends State<SellScreen> {
 
                 _FormLabel('Location'),
                 const SizedBox(height: 6),
-                _EcoField(ctrl: _locationCtrl, hint: 'Your city'),
+                Row(
+                  children: [
+                    Expanded(child: _EcoField(ctrl: _locationCtrl, hint: 'Your city')),
+                    const SizedBox(width: 8),
+                    IconButton.filled(
+                      onPressed: _gettingLocation ? null : _getCurrentLocation,
+                      style: IconButton.styleFrom(backgroundColor: ecoCard),
+                      icon: _gettingLocation 
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: ecoGreenLight))
+                        : Icon(_pickedLocation != null ? Icons.location_on : Icons.my_location, color: ecoGreenLight),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 16),
 
                 // Error

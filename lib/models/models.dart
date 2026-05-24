@@ -27,6 +27,7 @@ class Product {
   final String sellerId;
   final String sellerEmail;
   final String sellerLocation;
+  final Map<String, double>? location; // {lat: ..., lng: ...}
   final String sellerPhone;
   final String createdAt;
   final String status;
@@ -44,6 +45,7 @@ class Product {
     this.sellerId = '',
     this.sellerEmail = '',
     this.sellerLocation = '',
+    this.location,
     this.sellerPhone = '',
     this.createdAt = '',
     this.status = 'active',
@@ -64,6 +66,12 @@ class Product {
         sellerId: j['seller_id'] as String? ?? '',
         sellerEmail: j['seller_email'] as String? ?? '',
         sellerLocation: j['seller_location'] as String? ?? '',
+        location: j['location'] != null 
+            ? {
+                'lat': (j['location']['lat'] as num).toDouble(),
+                'lng': (j['location']['lng'] as num).toDouble(),
+              }
+            : null,
         sellerPhone: j['seller_phone'] as String? ?? '',
         createdAt: j['created_at'] as String? ?? '',
         status: j['status'] as String? ?? 'active',
@@ -145,6 +153,7 @@ class CreateProductRequest {
   final String material;
   final String sellerEmail;
   final String sellerLocation;
+  final Map<String, double>? location;
   final String sellerId;
 
   const CreateProductRequest({
@@ -157,6 +166,7 @@ class CreateProductRequest {
     required this.material,
     required this.sellerEmail,
     required this.sellerLocation,
+    this.location,
     this.sellerId = 'anonymous',
   });
 
@@ -170,6 +180,28 @@ class CreateProductRequest {
         'material': material,
         'seller_email': sellerEmail,
         'seller_location': sellerLocation,
+        'location': location,
         'seller_id': sellerId,
       };
+}
+
+class ChatMessage {
+  final String sender;
+  final String text;
+  final String createdAt;
+  final bool isMe;
+
+  ChatMessage({
+    required this.sender,
+    required this.text,
+    required this.createdAt,
+    this.isMe = false,
+  });
+
+  factory ChatMessage.fromJson(Map<String, dynamic> j, String myEmail) => ChatMessage(
+        sender: j['sender'] as String? ?? '',
+        text: j['text'] as String? ?? '',
+        createdAt: j['created_at'] as String? ?? '',
+        isMe: j['sender'] == myEmail,
+      );
 }

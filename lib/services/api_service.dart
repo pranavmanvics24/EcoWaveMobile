@@ -4,14 +4,31 @@ import '../models/models.dart';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 
-String get _backendUrl {
-  if (kIsWeb) return 'http://192.168.29.232:5001';
+/*String get _backendUrl {
+  if (kIsWeb) return 'http://localhost:5001';
   try {
-    if (Platform.isAndroid || Platform.isIOS) return 'http://192.168.29.232:5001';
+    if (Platform.isAndroid || Platform.isIOS) return 'http://localhost:5001';
   } catch (e) {
     // Handled
   }
-  return 'http://192.168.29.232:5001';
+  return 'http://localhost:5001';
+}*/
+
+String get _backendUrl {
+  if (kIsWeb) return 'http://localhost:5001';
+  try {
+    if (Platform.isAndroid) {
+      // 10.0.2.2 is the 'localhost' for Android Emulators to see the host machine
+      return 'http://10.0.2.2:5001';
+    }
+    if (Platform.isIOS) {
+      // iOS simulators share the network with the Mac, so localhost works
+      return 'http://localhost:5001';
+    }
+  } catch (e) {
+    // Fallback
+  }
+  return 'http://10.0.2.2:5001';
 }
 
 final String _baseUrl = _backendUrl;
@@ -106,5 +123,22 @@ class ApiService {
       }
     } catch (_) {}
     return null;
+  }
+
+  // ── Payments ─────────────────────────────────────────────────────────────
+  Future<Map<String, dynamic>> createPaymentOrder(double amount) async {
+    final res = await _dio.post('/api/payments/create-order', data: {
+      'amount': amount,
+    });
+    return res.data['order'] as Map<String, dynamic>;
+  }
+
+  Future<bool> verifyPayment(Map<String, dynamic> paymentData) async {
+    try {
+      final res = await _dio.post('/api/payments/verify', data: paymentData);
+      return res.data['success'] == true;
+    } catch (e) {
+      return false;
+    }
   }
 }

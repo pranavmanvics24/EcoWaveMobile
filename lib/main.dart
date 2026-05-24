@@ -5,6 +5,7 @@ import 'providers/auth_provider.dart';
 import 'providers/marketplace_provider.dart';
 import 'providers/sell_provider.dart';
 import 'providers/profile_provider.dart';
+import 'providers/chat_provider.dart';
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
 
@@ -44,6 +45,7 @@ class EcoWaveApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => MarketplaceProvider()),
         ChangeNotifierProvider(create: (_) => SellProvider()),
         ChangeNotifierProvider(create: (_) => ProfileProvider()),
+        ChangeNotifierProvider(create: (_) => ChatProvider()),
       ],
       child: Builder(builder: (context) {
         final router = AppRouter.build(context.read<AuthProvider>());
