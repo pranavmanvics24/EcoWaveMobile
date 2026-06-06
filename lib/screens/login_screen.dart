@@ -27,17 +27,50 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
-    await context.read<AuthProvider>().login(
-          _emailCtrl.text.trim(),
-          _nameCtrl.text.trim(),
+    
+    // Show a snackbar if it takes too long (Render cold start)
+    final coldStartTimer = Future.delayed(const Duration(seconds: 5), () {
+      if (mounted && _loading) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Starting server... This might take up to 60s on first load.'),
+            duration: Duration(seconds: 5),
+          ),
         );
-    if (mounted) {
-      final user = context.read<AuthProvider>().user;
-      if (user?.email == 'admin@ecowave.com') {
-        context.go('/admin');
-      } else {
-        context.go('/marketplace');
       }
+    });
+
+    try {
+      await context.read<AuthProvider>().login(
+            _emailCtrl.text.trim(),
+            _nameCtrl.text.trim(),
+          );
+      if (mounted) {
+        final user = context.read<AuthProvider>().user;
+        if (user?.email == 'admin@ecowave.com') {
+          context.go('/admin');
+        } else {
+          context.go('/marketplace');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        String errorMsg = e.toString();
+        if (errorMsg.contains('connection timeout')) {
+          errorMsg = 'Server is waking up. Please try again in a few seconds.';
+        } else if (errorMsg.contains('connection error')) {
+          errorMsg = 'No internet or server unreachable. Check your connection.';
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMsg),
+            backgroundColor: ecoError,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -149,6 +182,19 @@ class _LoginScreenState extends State<LoginScreen> {
                               isLoading: _loading,
                               onPressed: () async {
                                 setState(() => _loading = true);
+                                
+                                // Show a snackbar if it takes too long (Render cold start)
+                                final coldStartTimer = Future.delayed(const Duration(seconds: 5), () {
+                                  if (mounted && _loading) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Connecting to Google and Server... Please wait.'),
+                                        duration: Duration(seconds: 5),
+                                      ),
+                                    );
+                                  }
+                                });
+
                                 try {
                                   await context.read<AuthProvider>().loginWithGoogle();
                                   if (!context.mounted) return;
@@ -159,6 +205,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                     } else {
                                       context.go('/marketplace');
                                     }
+                                  }
+                                } catch (e) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Google Sign-In Error: $e')),
+                                    );
                                   }
                                 } finally {
                                   if (mounted) setState(() => _loading = false);
@@ -226,17 +278,50 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
-    await context.read<AuthProvider>().login(
-          _emailCtrl.text.trim(),
-          _nameCtrl.text.trim(),
+    
+    // Show a snackbar if it takes too long (Render cold start)
+    final coldStartTimer = Future.delayed(const Duration(seconds: 5), () {
+      if (mounted && _loading) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Starting server... This might take up to 60s on first load.'),
+            duration: Duration(seconds: 5),
+          ),
         );
-    if (mounted) {
-      final user = context.read<AuthProvider>().user;
-      if (user?.email == 'admin@ecowave.com') {
-        context.go('/admin');
-      } else {
-        context.go('/marketplace');
       }
+    });
+
+    try {
+      await context.read<AuthProvider>().login(
+            _emailCtrl.text.trim(),
+            _nameCtrl.text.trim(),
+          );
+      if (mounted) {
+        final user = context.read<AuthProvider>().user;
+        if (user?.email == 'admin@ecowave.com') {
+          context.go('/admin');
+        } else {
+          context.go('/marketplace');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        String errorMsg = e.toString();
+        if (errorMsg.contains('connection timeout')) {
+          errorMsg = 'Server is waking up. Please try again in a few seconds.';
+        } else if (errorMsg.contains('connection error')) {
+          errorMsg = 'No internet or server unreachable. Check your connection.';
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMsg),
+            backgroundColor: ecoError,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -345,6 +430,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               isLoading: _loading,
                               onPressed: () async {
                                 setState(() => _loading = true);
+                                
+                                // Show a snackbar if it takes too long (Render cold start)
+                                final coldStartTimer = Future.delayed(const Duration(seconds: 5), () {
+                                  if (mounted && _loading) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Connecting to Google and Server... Please wait.'),
+                                        duration: Duration(seconds: 5),
+                                      ),
+                                    );
+                                  }
+                                });
+
                                 try {
                                   await context.read<AuthProvider>().loginWithGoogle();
                                   if (!context.mounted) return;
@@ -355,6 +453,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     } else {
                                       context.go('/marketplace');
                                     }
+                                  }
+                                } catch (e) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Google Sign-In Error: $e')),
+                                    );
                                   }
                                 } finally {
                                   if (mounted) setState(() => _loading = false);

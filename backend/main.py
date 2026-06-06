@@ -1298,8 +1298,6 @@ def mark_as_shipped(current_user):
     except Exception as e:
         app.logger.error(f"Error in mark_as_shipped: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
 
 if __name__ == "__main__":
     # Python 3.13 + eventlet is unstable. Using standard Flask runner.

@@ -71,9 +71,13 @@ class AuthProvider extends ChangeNotifier {
         scopes: ['email', 'profile'],
       );
       
-      final GoogleSignInAccount? account = await googleSignIn.signIn();
+      // Add a timeout to prevent infinite buffering if configuration is wrong
+      final GoogleSignInAccount? account = await googleSignIn.signIn().timeout(
+        const Duration(seconds: 30),
+        onTimeout: () => throw Exception('Google Sign-In timed out. Check your internet and SHA-1 registration.'),
+      );
+      
       if (account == null) {
-        // User cancelled login
         return;
       }
       

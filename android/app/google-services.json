@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "744566552819",
+    "project_id": "ecowave-4eba6",
+    "storage_bucket": "ecowave-4eba6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:744566552819:android:900c14c21238a6cebd1f86",
+        "android_client_info": {
+          "package_name": "com.ecowave.ecowave_flutter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC-_SD5BiOuNhqF8HGU_G35m2y9lm8Mcn4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
