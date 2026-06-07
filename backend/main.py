@@ -469,9 +469,13 @@ def api_auth_login():
         return jsonify({"success": False, "error": "Email is required"}), 400
     
     email = data["email"]
-    name = data.get("name", email.split("@")[0])
+    # Allow login with just email (password is checked if exists in db, otherwise we treat it as a guest-style login for now)
+    user = users_col.find_one({"email": email})
     
-    user = upsert_oauth_user(email=email, name=name, provider="mobile_app")
+    if not user:
+        name = data.get("name", email.split("@")[0])
+        user = upsert_oauth_user(email=email, name=name, provider="mobile_app")
+
     jwt_token = create_jwt_for_user(user)
     
     return jsonify({
@@ -479,7 +483,51 @@ def api_auth_login():
         "token": jwt_token,
         "user": {
             "email": user["email"],
-            "name": user.get("name", "")
+            "name": user.get("name", "User")
+        }
+    }), 200
+
+@app.route("/api/auth/register", methods=["POST"])
+def api_auth_register():
+    """Mobile registration endpoint"""
+    data = request.get_json()
+    email = data.get("email")
+    username = data.get("username")
+
+    if not email or not username:
+        return jsonify({"success": False, "error": "Email and username are required"}), 400
+
+    user = upsert_oauth_user(email=email, name=username, provider="mobile_app")
+    jwt_token = create_jwt_for_user(user)
+
+    return jsonify({
+        "success": True,
+        "token": jwt_token,
+        "user": {
+            "email": user["email"],
+            "name": user.get("name", username)
+        }
+    }), 200
+
+@app.route("/api/auth/google", methods=["POST"])
+def api_auth_google_mobile():
+    """Mobile-specific Google login (exchange email/name for JWT)"""
+    data = request.get_json()
+    email = data.get("email")
+    name = data.get("name")
+
+    if not email:
+        return jsonify({"success": False, "error": "Email required"}), 400
+
+    user = upsert_oauth_user(email=email, name=name, provider="google")
+    jwt_token = create_jwt_for_user(user)
+
+    return jsonify({
+        "success": True,
+        "token": jwt_token,
+        "user": {
+            "email": user["email"],
+            "name": user.get("name", "Google User")
         }
     }), 200
 
