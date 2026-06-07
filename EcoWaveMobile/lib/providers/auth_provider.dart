@@ -12,6 +12,9 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoggedIn => _user != null;
 
   final ApiService _api = ApiService();
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: ['email', 'profile'],
+  );
 
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
@@ -91,12 +94,12 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> loginWithGoogle() async {
     try {
-      final GoogleSignIn googleSignIn = GoogleSignIn(
-        serverClientId: '983958658964-c7b2n8l9kj01t1f0mc9dho7rtabriqe6.apps.googleusercontent.com',
-        scopes: ['email', 'profile'],
-      );
-      
-      final GoogleSignInAccount? account = await googleSignIn.signIn().timeout(
+      // Disconnect first to ensure the user can pick an account if they failed previously
+      try {
+        await _googleSignIn.signOut();
+      } catch (_) {}
+
+      final GoogleSignInAccount? account = await _googleSignIn.signIn().timeout(
         const Duration(seconds: 30),
         onTimeout: () => throw Exception('Google Sign-In timed out.'),
       );

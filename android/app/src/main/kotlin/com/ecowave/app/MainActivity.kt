@@ -1,4 +1,4 @@
-package com.ecowave.ecowave_flutter
+package com.ecowave.app
 
 import io.flutter.embedding.android.FlutterActivity
 
