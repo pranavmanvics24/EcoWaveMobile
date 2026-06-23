@@ -68,6 +68,8 @@ class AuthProvider extends ChangeNotifier {
   Future<void> loginWithGoogle() async {
     try {
       final GoogleSignIn googleSignIn = GoogleSignIn(
+        // The serverClientId is required to get an idToken for the backend
+        serverClientId: '983958658964-947r9c6oc8hvbfa3at682qhitah8f3qr.apps.googleusercontent.com',
         scopes: ['email', 'profile'],
       );
       
