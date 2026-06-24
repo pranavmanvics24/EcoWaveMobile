@@ -32,7 +32,9 @@ class _ChatScreenState extends State<ChatScreen> {
       
       // Stable Room ID: productID_buyerEmail
       // If current user is NOT the seller, they are the buyer.
-      final buyer = widget.buyerEmail ?? (user.email == widget.product.sellerEmail ? '' : user.email);
+      final buyer = (widget.buyerEmail != null && widget.buyerEmail!.isNotEmpty)
+          ? widget.buyerEmail!
+          : (user.email == widget.product.sellerEmail ? '' : user.email);
       final roomId = '${widget.product.id}_$buyer';
       
       _chatProvider.joinRoom(roomId);
@@ -69,7 +71,9 @@ class _ChatScreenState extends State<ChatScreen> {
     if (_msgCtrl.text.trim().isEmpty) return;
     final user = context.read<AuthProvider>().user;
     if (user != null) {
-      final buyer = widget.buyerEmail ?? (user.email == widget.product.sellerEmail ? '' : user.email);
+      final buyer = (widget.buyerEmail != null && widget.buyerEmail!.isNotEmpty)
+          ? widget.buyerEmail!
+          : (user.email == widget.product.sellerEmail ? '' : user.email);
       final roomId = '${widget.product.id}_$buyer';
       
       _chatProvider.sendMessage(

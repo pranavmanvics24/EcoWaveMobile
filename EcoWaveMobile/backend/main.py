@@ -513,32 +513,45 @@ def api_auth_register():
         if password != confirm_password:
             return jsonify({"success": False, "error": "Passwords do not match"}), 400
 
-        if users_col.find_one({"email": email}):
-            return jsonify({"success": False, "error": "Email already registered"}), 400
+        # Check if user already exists
+        existing_user = users_col.find_one({"email": email})
+        if existing_user:
+            if existing_user.get("password"):
+                return jsonify({"success": False, "error": "Email already registered"}), 400
+            else:
+                # User exists (likely via Google) but has no password. Allow setting one.
+                users_col.update_one(
+                    {"email": email},
+                    {"$set": {
+                        "password": generate_password_hash(password),
+                        "updated_at": datetime.utcnow()
+                    }}
+                )
+                user_doc = users_col.find_one({"email": email})
+        else:
+            now = datetime.utcnow()
+            user_doc = {
+                "email": email,
+                "username": username,
+                "name": username,
+                "password": generate_password_hash(password),
+                "provider": "email",
+                "created_at": now,
+                "updated_at": now,
+                "balance": 100000.0,
+                "phone": "",
+                "is_verified": email == "admin@ecowave.com",
+                "is_trusted_seller": email == "admin@ecowave.com",
+                "rating": 5.0,
+                "sales_count": 0,
+                "is_banned": False,
+                "report_count": 0,
+                "ban_reason": None,
+                "cancellation_rate": 0.0,
+            }
+            users_col.insert_one(user_doc)
 
-        now = datetime.utcnow()
-        user_doc = {
-            "email": email,
-            "username": username,
-            "name": username,
-            "password": generate_password_hash(password),
-            "provider": "email",
-            "created_at": now,
-            "updated_at": now,
-            "balance": 100000.0,
-            "phone": "",
-            "is_verified": email == "admin@ecowave.com",
-            "is_trusted_seller": email == "admin@ecowave.com",
-            "rating": 5.0,
-            "sales_count": 0,
-            "is_banned": False,
-            "report_count": 0,
-            "ban_reason": None,
-            "cancellation_rate": 0.0,
-        }
-
-        users_col.insert_one(user_doc)
-        user_doc["user_id"] = username
+        user_doc["user_id"] = user_doc.get("username", username)
         jwt_token = create_jwt_for_user(user_doc)
 
         return jsonify({
@@ -568,7 +581,7 @@ def api_auth_login():
     
     # If user registered via Google, they might not have a password
     if not user.get("password"):
-        return jsonify({"success": False, "error": "This account uses Google Sign-In. Please use Continue with Google."}), 401
+        return jsonify({"success": False, "error": "This account uses Google Sign-In. Please use Continue with Google or set a password by registering."}), 401
 
     if not check_password_hash(user["password"], password):
         return jsonify({"success": False, "error": "Invalid email or password"}), 401

@@ -249,7 +249,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _submit() async {
     final email = _emailCtrl.text.trim();
-    if (email.isEmpty) return;
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter an email')),
+      );
+      return;
+    }
+
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid email address'),
+          backgroundColor: ecoError,
+        ),
+      );
+      return;
+    }
 
     setState(() => _loading = true);
     

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../providers/profile_provider.dart';
@@ -138,12 +139,15 @@ class _SellerDashboardState extends State<SellerDashboard> {
               ClipRRect(borderRadius: BorderRadius.circular(8), child: SizedBox(width: 50, height: 50, child: ProductImage(image: item.image))),
               const SizedBox(width: 12),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(item.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    Text('Buyer: ${item.buyerEmail ?? "N/A"}', style: TextStyle(color: ecoMuted, fontSize: 11)),
-                  ],
+                child: GestureDetector(
+                  onTap: () => context.push('/chat?buyerEmail=${item.buyerEmail ?? ''}', extra: item),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(item.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      Text('Buyer: ${item.buyerEmail ?? "N/A"}', style: TextStyle(color: ecoMuted, fontSize: 11)),
+                    ],
+                  ),
                 ),
               ),
               ElevatedButton(

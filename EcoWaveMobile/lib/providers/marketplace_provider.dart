@@ -17,15 +17,20 @@ class MarketplaceProvider extends ChangeNotifier {
   String get selectedCategory => _selectedCategory;
   String get searchQuery => _searchQuery;
 
-  Future<void> loadProducts() async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
+  Future<void> loadProducts({bool silent = false}) async {
+    if (!silent) {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+    }
+    
     try {
-      _products = await _api.getProducts(
+      final results = await _api.getProducts(
         category: _selectedCategory,
         search: _searchQuery,
       );
+      _products = results;
+      _error = null;
     } catch (e) {
       _error = e.toString().replaceAll('DioException', 'Network error');
     } finally {
@@ -35,14 +40,16 @@ class MarketplaceProvider extends ChangeNotifier {
   }
 
   void setCategory(String cat) {
+    if (_selectedCategory == cat) return;
     _selectedCategory = cat;
     loadProducts();
   }
 
   void setSearch(String q) {
+    if (_searchQuery == q) return;
     _searchQuery = q;
-    // debounce by just loading — add Timer for production
-    loadProducts();
+    // For search, we might want a slight debounce or just load
+    loadProducts(silent: true);
   }
 
   void refresh() => loadProducts();

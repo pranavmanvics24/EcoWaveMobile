@@ -101,6 +101,17 @@ class MapScreen extends StatelessWidget {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          final url = 'https://www.google.com/maps/dir/?api=1&destination=${product.location?['lat']},${product.location?['lng']}';
+          if (await canLaunchUrl(Uri.parse(url))) {
+            await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+          }
+        },
+        backgroundColor: ecoGreen,
+        icon: const Icon(Icons.directions, color: Colors.white),
+        label: const Text('Get Directions', style: TextStyle(color: Colors.white)),
+      ),
     );
   }
 }

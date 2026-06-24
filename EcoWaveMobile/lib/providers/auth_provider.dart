@@ -13,6 +13,7 @@ class AuthProvider extends ChangeNotifier {
 
   final ApiService _api = ApiService();
   final GoogleSignIn _googleSignIn = GoogleSignIn(
+    serverClientId: '983958658964-c7b2n8l9kj01t1f0mc9dho7rtabriqe6.apps.googleusercontent.com',
     scopes: ['email', 'profile'],
   );
 

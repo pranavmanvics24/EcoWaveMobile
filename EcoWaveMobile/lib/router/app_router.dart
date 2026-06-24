@@ -74,7 +74,11 @@ class AppRouter {
           ),
           GoRoute(
             path: '/chat',
-            builder: (context, state) => ChatScreen(product: state.extra as Product),
+            builder: (context, state) {
+              final product = state.extra as Product;
+              final buyerEmail = state.uri.queryParameters['buyerEmail'];
+              return ChatScreen(product: product, buyerEmail: buyerEmail);
+            },
           ),
           GoRoute(
             path: '/map',

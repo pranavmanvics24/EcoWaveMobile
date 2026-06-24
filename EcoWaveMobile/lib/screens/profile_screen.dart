@@ -437,29 +437,35 @@ class _PurchaseCard extends StatelessWidget {
       border: Border.all(color: ecoBorder),
     ),
     child: Row(children: [
-      ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: SizedBox(
-          width: 65, height: 65,
-          child: ProductImage(image: product.image),
+      GestureDetector(
+        onTap: () => context.push('/chat?buyerEmail=${product.buyerEmail ?? ''}', extra: product),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: SizedBox(
+            width: 65, height: 65,
+            child: ProductImage(image: product.image),
+          ),
         ),
       ),
       const SizedBox(width: 12),
-      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(product.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-                color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
-        Text('Sold by ${product.sellerEmail}',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: ecoMuted, fontSize: 11)),
-        const SizedBox(height: 4),
-        Text('₹${product.price.toStringAsFixed(0)}',
-            style: const TextStyle(
-                color: ecoGreenLight, fontWeight: FontWeight.w800, fontSize: 16)),
-      ])),
+      Expanded(child: GestureDetector(
+        onTap: () => context.push('/chat?buyerEmail=${product.buyerEmail ?? ''}', extra: product),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(product.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                  color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+          Text('Sold by ${product.sellerEmail}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: ecoMuted, fontSize: 11)),
+          const SizedBox(height: 4),
+          Text('₹${product.price.toStringAsFixed(0)}',
+              style: const TextStyle(
+                  color: ecoGreenLight, fontWeight: FontWeight.w800, fontSize: 16)),
+        ]),
+      )),
       const SizedBox(width: 8),
       Column(
         mainAxisSize: MainAxisSize.min,

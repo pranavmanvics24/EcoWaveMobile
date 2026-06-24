@@ -30,13 +30,18 @@ class MarketplaceScreen extends StatefulWidget {
 }
 
 class _MarketplaceScreenState extends State<MarketplaceScreen> {
-  final _searchCtrl = TextEditingController();
+  late final TextEditingController _searchCtrl;
 
   @override
   void initState() {
     super.initState();
+    final mp = context.read<MarketplaceProvider>();
+    _searchCtrl = TextEditingController(text: mp.searchQuery);
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<MarketplaceProvider>().loadProducts();
+      if (mp.products.isEmpty) {
+        mp.loadProducts();
+      }
     });
   }
 
@@ -486,7 +491,11 @@ class _ProductDetailSheetState extends State<ProductDetailSheet> {
             Expanded(child: SizedBox(height: 50, child: OutlinedButton(
               style: OutlinedButton.styleFrom(side: const BorderSide(color: ecoGreen),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-              onPressed: () { Navigator.pop(context); context.push('/chat', extra: product); },
+              onPressed: () {
+                final user = context.read<AuthProvider>().user;
+                Navigator.pop(context);
+                context.push('/chat?buyerEmail=${user?.email ?? ''}', extra: product);
+              },
               child: const Text('Chat', style: TextStyle(color: ecoGreenLight))))),
           ]),
           const SizedBox(height: 16),
@@ -856,11 +865,25 @@ class _UpiCheckoutSheetState extends State<_UpiCheckoutSheet> {
 
   String get _upiUrl {
     final p = widget.product;
-    final amount = (p.price * 0.3).toStringAsFixed(2); // Initial 30% stage
-    return 'upi://pay?pa=${Uri.encodeComponent(p.sellerUpiId)}'
-        '&pn=${Uri.encodeComponent("EcoWave Seller")}'
-        '&am=$amount&cu=INR'
-        '&tn=${Uri.encodeComponent("EcoWave: ${p.title} (Advance)")}';
+    final advanceAmount = (p.price * 0.3).toStringAsFixed(2); // Initial 30% stage
+    
+    // Construct UPI URL with proper encoding and mandatory parameters
+    final Map<String, String> params = {
+      'pa': p.sellerUpiId,
+      'pn': 'EcoWave Seller',
+      'am': advanceAmount,
+      'cu': 'INR',
+      'tn': 'EcoWave: ${p.title} (Advance)',
+      'tr': _txnId ?? 'tx${DateTime.now().millisecondsSinceEpoch}', // Transaction Reference
+    };
+
+    final uri = Uri(
+      scheme: 'upi',
+      host: 'pay',
+      queryParameters: params,
+    );
+    
+    return uri.toString();
   }
 
   Future<void> _initTransaction() async {
